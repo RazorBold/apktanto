@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "1006329067790",
+    "project_id": "databasebatch1",
+    "storage_bucket": "databasebatch1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1006329067790:android:e08c350a352d214393bf5f",
+        "android_client_info": {
+          "package_name": "com.android.tanto_apk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0F2HOwcTY1YKM2nwgPSmvRp52aPnmF-A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1006329067790:android:7eb9f10b844c080293bf5f",
+        "android_client_info": {
+          "package_name": "com.example.apktanto"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0F2HOwcTY1YKM2nwgPSmvRp52aPnmF-A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1006329067790:android:6ba6423083b8397893bf5f",
+        "android_client_info": {
+          "package_name": "com.example.tanto_apk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0F2HOwcTY1YKM2nwgPSmvRp52aPnmF-A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
