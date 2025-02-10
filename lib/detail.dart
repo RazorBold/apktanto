@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'models/wiw_data.dart';
+import 'services/storage_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 class DetailPage extends StatefulWidget {
   final String containerId;
@@ -23,6 +29,9 @@ class _DetailPageState extends State<DetailPage> {
   bool isLoading = true;
   String documentId = '';
   final TextEditingController _keteranganController = TextEditingController();
+  File? _beforeImage;
+  File? _afterImage;
+  final _storageService = StorageService();
 
   @override
   void initState() {
@@ -68,14 +77,100 @@ class _DetailPageState extends State<DetailPage> {
     }
   }
 
+  Future<void> _pickImage(bool isBefore) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 70, // Compress saat pengambilan foto
+    );
+    
+    if (pickedFile != null) {
+      // Compress image
+      final dir = await getTemporaryDirectory();
+      final targetPath = p.join(dir.path, '${DateTime.now().millisecondsSinceEpoch}.jpg');
+      
+      final compressedFile = await FlutterImageCompress.compressAndGetFile(
+        pickedFile.path,
+        targetPath,
+        quality: 70,      // Kualitas kompresi (0-100)
+        minWidth: 1024,   // Lebar maksimum
+        minHeight: 1024,  // Tinggi maksimum
+      );
+
+      if (compressedFile != null) {
+        setState(() {
+          if (isBefore) {
+            _beforeImage = File(compressedFile.path);
+          } else {
+            _afterImage = File(compressedFile.path);
+          }
+        });
+      }
+    }
+  }
+
   Future<void> _updateStatus() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Mengupload foto...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
     try {
+      String? beforeImageUrl;
+      String? afterImageUrl;
+
+      if (_beforeImage != null) {
+        beforeImageUrl = await _storageService.uploadBeforeImage(
+          widget.containerId, 
+          _beforeImage!
+        );
+      }
+      
+      if (_afterImage != null) {
+        afterImageUrl = await _storageService.uploadAfterImage(
+          widget.containerId, 
+          _afterImage!
+        );
+      }
+
       // Update status lokal dulu
       final newStatus = _status == 'Pending' ? 'Done' : 'Pending';
       
       // Siapkan data untuk update
       Map<String, dynamic> updateData = {
-        'Action': newStatus
+        'Action': newStatus,
+        'beforeImage': beforeImageUrl,
+        'afterImage': afterImageUrl,
       };
 
       // Jika status berubah menjadi Done
@@ -101,23 +196,34 @@ class _DetailPageState extends State<DetailPage> {
         _status = newStatus;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(newStatus == 'Done' 
-            ? 'Container telah selesai di update' 
-            : 'Status container diperbarui'),
-          backgroundColor: newStatus == 'Done' ? Colors.green : Colors.blue,
-        ),
-      );
-      Navigator.pop(context, true);
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show success and navigate back
+      if (mounted) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(newStatus == 'Done' 
+              ? 'Container telah selesai di update' 
+              : 'Status container diperbarui'),
+            backgroundColor: newStatus == 'Done' ? Colors.green : Colors.blue,
+          ),
+        );
+      }
     } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
       print('Error updating status: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal mengupdate status'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal mengupdate status'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -398,7 +504,131 @@ class _DetailPageState extends State<DetailPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Add keterangan field before status button
+                // Box foto before
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.2),
+                        Colors.white.withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Foto Before Troubleshoot',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => _pickImage(true),
+                        child: Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          child: _beforeImage != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.file(
+                                    _beforeImage!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  ),
+                                )
+                              : const Center(
+                                  child: Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Box foto after
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.2),
+                        Colors.white.withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Foto After Troubleshoot',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => _pickImage(false),
+                        child: Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          child: _afterImage != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.file(
+                                    _afterImage!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                  ),
+                                )
+                              : const Center(
+                                  child: Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 40,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Moved keterangan troubleshoot here
                 if (_status == 'Pending') Container(
                   margin: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
@@ -476,7 +706,9 @@ class _DetailPageState extends State<DetailPage> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 32),  // Added more space before update button
 
+                // Update Status button
                 SizedBox(
                   width: double.infinity,
                   height: 60,

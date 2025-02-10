@@ -7,6 +7,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'models/wiw_data.dart';
 import 'login_page.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'home_page.dart';
 
 
 // Tambahkan global provider untuk data
@@ -33,8 +37,15 @@ class MyApp extends StatelessWidget {
       title: 'Container Tracking',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarDividerColor: Colors.transparent,
+          ),
+        ),
       ),
-      home: const LoginPage(),
+      home: const HomePage(),
     );
   }
 }
@@ -104,6 +115,65 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     return Scaffold(
+      extendBody: true,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        toolbarHeight: 45,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.black.withOpacity(0.2),
+                Colors.black.withOpacity(0.1),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              icon: const Icon(
+                Icons.logout,
+                color: Colors.white,
+                size: 20,
+              ),
+              label: const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              onPressed: () async {
+                try {
+                  await FirebaseAuth.instance.signOut();
+                  if (mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const LoginPage(),
+                      ),
+                      (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Gagal logout'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -118,38 +188,6 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Tanto Apps',
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                shadows: [
-                  Shadow(
-                    color: Color(0xFF1A2980),
-                    offset: Offset(2, 2),
-                    blurRadius: 3,
-                  ),
-                ],
-              ),
-            ),
-            const Text(
-              'Troubleshoot',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-                letterSpacing: 3,
-                shadows: [
-                  Shadow(
-                    color: Color(0xFF1A2980),
-                    offset: Offset(2, 2),
-                    blurRadius: 3,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Container(
@@ -394,6 +432,36 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.black.withOpacity(0.2),
+              Colors.black.withOpacity(0.1),
+            ],
+          ),
+          border: Border(
+            top: BorderSide(
+              color: Colors.white.withOpacity(0.1),
+              width: 0.5,
+            ),
+          ),
+        ),
+        child: const Center(
+          child: Text(
+            'Created By Telkom Indonesia',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.5,
+            ),
+          ),
         ),
       ),
     );
